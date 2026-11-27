@@ -16,7 +16,6 @@ var y_graph: CurveGraph
 var header: HBoxContainer
 var dragging := false
 var user_positioned := false
-var resize_grips: Array[Control] = []
 var resize_mode := ""
 var resize_mouse := Vector2.ZERO
 var resize_size := Vector2.ZERO
@@ -366,7 +365,7 @@ func _create_resize_grips() -> void:
 	_create_resize_grip("corner", Control.CURSOR_FDIAGSIZE, 1.0, 1.0, 1.0, 1.0, -12.0, 0.0, -12.0, 0.0)
 
 
-func _create_resize_grip(mode: String, cursor: Control.CursorShape, left_anchor: float, right_anchor: float, top_anchor: float, bottom_anchor: float, left_offset: float, right_offset: float, top_offset: float, bottom_offset: float) -> void:
+func _create_resize_grip(mode: String, cursor: int, left_anchor: float, right_anchor: float, top_anchor: float, bottom_anchor: float, left_offset: float, right_offset: float, top_offset: float, bottom_offset: float) -> void:
 	var grip := Control.new()
 	grip.name = "ResizeGrip_" + mode
 	grip.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -381,7 +380,6 @@ func _create_resize_grip(mode: String, cursor: Control.CursorShape, left_anchor:
 	grip.offset_bottom = bottom_offset
 	grip.gui_input.connect(_on_resize_input.bind(mode))
 	add_child(grip)
-	resize_grips.append(grip)
 
 
 func _on_resize_input(event: InputEvent, mode: String) -> void:
