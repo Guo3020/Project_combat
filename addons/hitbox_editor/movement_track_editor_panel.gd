@@ -392,6 +392,7 @@ func _on_resize_input(event: InputEvent, mode: String) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
 			resize_mode = mode
+			user_positioned = true
 			resize_mouse = get_global_mouse_position()
 			resize_size = size
 			resize_position = position
