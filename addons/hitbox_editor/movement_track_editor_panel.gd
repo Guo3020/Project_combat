@@ -15,11 +15,12 @@ var x_graph: CurveGraph
 var y_graph: CurveGraph
 var header: HBoxContainer
 var dragging := false
-var resizing := false
 var user_positioned := false
-var resize_grip: Control
+var resize_grips: Array[Control] = []
+var resize_mode := ""
 var resize_mouse := Vector2.ZERO
 var resize_size := Vector2.ZERO
+var resize_position := Vector2.ZERO
 var drag_origin := Vector2.ZERO
 var panel_origin := Vector2.ZERO
 var number_dialog: AcceptDialog
@@ -188,17 +189,7 @@ func _ready() -> void:
 	number_dialog.title = "输入数值"
 	get_parent().add_child(number_dialog)
 
-	var resize_row := HBoxContainer.new()
-	root_layout.add_child(resize_row)
-	var resize_spacer := Control.new()
-	resize_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	resize_row.add_child(resize_spacer)
-	resize_grip = Control.new()
-	resize_grip.custom_minimum_size = Vector2(12, 12)
-	resize_grip.mouse_filter = Control.MOUSE_FILTER_STOP
-	resize_grip.mouse_default_cursor_shape = Control.CURSOR_FDIAGSIZE
-	resize_grip.gui_input.connect(_on_resize_input)
-	resize_row.add_child(resize_grip)
+	_create_resize_grips()
 
 	number_spin = SpinBox.new()
 	number_spin.min_value = 0.01
@@ -351,29 +342,57 @@ func _process(_delta: float) -> void:
 	if dragging:
 		position = panel_origin + get_global_mouse_position() - drag_origin
 		user_positioned = true
-	if resizing:
-		var next_size := resize_size + get_global_mouse_position() - resize_mouse
-		size = Vector2(clampf(next_size.x, 280.0, 620.0), clampf(next_size.y, 300.0, 760.0))
-		custom_minimum_size = Vector2(size.x, 300.0)
-		_position_resize_grip()
+	if not resize_mode.is_empty():
+		var mouse_delta := get_global_mouse_position() - resize_mouse
+		var next_width := resize_size.x
+		var next_height := resize_size.y
+		if resize_mode == "left":
+			next_width = clampf(resize_size.x - mouse_delta.x, 280.0, 620.0)
+			position.x = resize_position.x + resize_size.x - next_width
+		elif resize_mode == "right" or resize_mode == "corner":
+			next_width = clampf(resize_size.x + mouse_delta.x, 280.0, 620.0)
+		if resize_mode == "bottom" or resize_mode == "corner":
+			next_height = clampf(resize_size.y + mouse_delta.y, 300.0, 760.0)
+		size = Vector2(next_width, next_height)
+		custom_minimum_size = Vector2(next_width, 300.0)
 	if not user_positioned and get_parent() != null and get_parent().size.x > size.x + 24.0:
 		position.x = get_parent().size.x - size.x - 12.0
 
 
-func _position_resize_grip() -> void:
-	if not is_instance_valid(resize_grip):
-		return
-	resize_grip.custom_minimum_size = Vector2(12.0, 12.0)
+func _create_resize_grips() -> void:
+	_create_resize_grip("bottom", Control.CURSOR_VSIZE, 0.0, 1.0, 1.0, 1.0, 8.0, -8.0, -6.0, 0.0)
+	_create_resize_grip("left", Control.CURSOR_HSIZE, 0.0, 0.0, 0.0, 1.0, 0.0, 6.0, 8.0, -8.0)
+	_create_resize_grip("right", Control.CURSOR_HSIZE, 1.0, 1.0, 0.0, 1.0, -6.0, 0.0, 8.0, -8.0)
+	_create_resize_grip("corner", Control.CURSOR_FDIAGSIZE, 1.0, 1.0, 1.0, 1.0, -12.0, 0.0, -12.0, 0.0)
 
 
-func _on_resize_input(event: InputEvent) -> void:
+func _create_resize_grip(mode: String, cursor: Control.CursorShape, left_anchor: float, right_anchor: float, top_anchor: float, bottom_anchor: float, left_offset: float, right_offset: float, top_offset: float, bottom_offset: float) -> void:
+	var grip := Control.new()
+	grip.name = "ResizeGrip_" + mode
+	grip.mouse_filter = Control.MOUSE_FILTER_STOP
+	grip.mouse_default_cursor_shape = cursor
+	grip.anchor_left = left_anchor
+	grip.anchor_right = right_anchor
+	grip.anchor_top = top_anchor
+	grip.anchor_bottom = bottom_anchor
+	grip.offset_left = left_offset
+	grip.offset_right = right_offset
+	grip.offset_top = top_offset
+	grip.offset_bottom = bottom_offset
+	grip.gui_input.connect(_on_resize_input.bind(mode))
+	add_child(grip)
+	resize_grips.append(grip)
+
+
+func _on_resize_input(event: InputEvent, mode: String) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
-			resizing = true
+			resize_mode = mode
 			resize_mouse = get_global_mouse_position()
 			resize_size = size
+			resize_position = position
 		else:
-			resizing = false
-		resize_grip.accept_event()
-	elif event is InputEventMouseMotion and resizing:
-		resize_grip.accept_event()
+			resize_mode = ""
+		get_viewport().set_input_as_handled()
+	elif event is InputEventMouseMotion and not resize_mode.is_empty():
+		get_viewport().set_input_as_handled()
