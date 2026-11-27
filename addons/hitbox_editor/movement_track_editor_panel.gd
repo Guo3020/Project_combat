@@ -8,6 +8,7 @@ const PANEL_WIDTH := 320.0
 var movement: MovementModule
 var scroll: ScrollContainer
 var root_layout: VBoxContainer
+var overlay: Control
 var duration_axis_buttons: Array[Button] = []
 var duration_spin: SpinBox
 var collision_option: OptionButton
@@ -133,8 +134,13 @@ func _ready() -> void:
 	style.content_margin_bottom = 8
 	add_theme_stylebox_override("panel", style)
 
+	overlay = Control.new()
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(overlay)
+
 	root_layout = VBoxContainer.new()
-	add_child(root_layout)
+	root_layout.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.add_child(root_layout)
 	header = HBoxContainer.new()
 	header.mouse_filter = Control.MOUSE_FILTER_STOP
 	header.mouse_default_cursor_shape = Control.CURSOR_MOVE
@@ -379,7 +385,7 @@ func _create_resize_grip(mode: String, cursor: int, left_anchor: float, right_an
 	grip.offset_top = top_offset
 	grip.offset_bottom = bottom_offset
 	grip.gui_input.connect(_on_resize_input.bind(mode))
-	add_child(grip)
+	overlay.add_child(grip)
 
 
 func _on_resize_input(event: InputEvent, mode: String) -> void:
